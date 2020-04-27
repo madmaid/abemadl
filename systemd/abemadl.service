@@ -1,0 +1,11 @@
+[Unit]
+Description=Download AbemaTV Videos
+[Service]
+Type=oneshot
+WorkingDirectory=%h/repo/nicochdl/
+ExecStart=/usr/bin/npm start /media/recorded/abema/ 2>&1
+
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=default.target
