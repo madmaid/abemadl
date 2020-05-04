@@ -3,7 +3,7 @@ Description=Download AbemaTV Videos
 [Service]
 Type=oneshot
 WorkingDirectory=%h/repo/abemadl/
-ExecStart=/usr/bin/npm start /media/recorded/abema/
+ExecStart=/usr/bin/npm start -- crawl --dst /media/recorded/abema/
 
 Environment=NODE_ENV=production
 

@@ -4,6 +4,7 @@ import os from "os";
 import path from "path";
 import url from "url";
 
+import yargs from "yargs";
 import sanitize from "sanitize-filename";
 import puppeteer from "puppeteer";
 
@@ -50,7 +51,7 @@ function abspath(relative: string) {
 }
 
 
-async function crawl(browser: puppeteer.Browser, URL: string): Promise<VODStatus> {
+async function scrape(browser: puppeteer.Browser, URL: string): Promise<VODStatus> {
     const page = await browser.newPage();
     await page.setViewport({ width: 1200, height: 800 });
 
@@ -114,13 +115,14 @@ function download(episode: Episode, title: string, recordedDir: string): Episode
     return episode;
 }
 
-(async function main(){
+async function crawl(rawUrlsPath: string, rawRecordedDir: string ){
     const logPath = abspath("~/.log/abemadl/downloads.json");
-    const urlsPath = abspath("~/.config/abemadl/urls.json");
-    initFile(logPath, "{}");
-    initFile(urlsPath, "[]");
+    const urlsPath = abspath(rawUrlsPath);
 
-    const recordedDir = abspath(process.argv[2] || "./");
+    initFile(urlsPath, "[]");
+    initFile(logPath, "{}");
+
+    const recordedDir = abspath(rawRecordedDir);
 
     const log = JSON.parse(fs.readFileSync(logPath, "utf8")) as Log;
     const urls = JSON.parse(fs.readFileSync(urlsPath, "utf8")) as string[];
@@ -128,7 +130,7 @@ function download(episode: Episode, title: string, recordedDir: string): Episode
     const browser = await puppeteer.launch({ args: ["--no-sandbox", "--disable-setuid-sandbox"] });
 
     // fetch metadata
-    const programs: VODStatus[] = await Promise.all(urls.map(URL => crawl(browser, URL)));
+    const programs: VODStatus[] = await Promise.all(urls.map(URL => scrape(browser, URL)));
     browser.close();
 
     const downloadTargets: VODStatus[] = programs.map((program: VODStatus) => {
@@ -159,5 +161,24 @@ function download(episode: Episode, title: string, recordedDir: string): Episode
     });
 
     fs.writeFileSync(logPath, JSON.stringify(newLog));
+}
+
+(function main(){
+
+    yargs.command("crawl", "download videos from URLs in json", {
+        urlsPath: {
+            alias: "urls",
+            default: "~/.config/abemadl/urls.json"
+        },
+        recordedDir: {
+            alias: "dst",
+            default: "./"
+        }
+    },
+    (args) => {
+        console.log(args.urlsPath)
+        crawl(args.urlsPath as string, args.recordedDir as string);
+    }).argv;
+
 
 })();
