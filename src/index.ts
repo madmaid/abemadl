@@ -176,7 +176,6 @@ async function crawl(rawUrlsPath: string, rawRecordedDir: string ){
         }
     },
     (args) => {
-        console.log(args.urlsPath)
         crawl(args.urlsPath as string, args.recordedDir as string);
     }).argv;
 
