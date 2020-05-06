@@ -50,6 +50,29 @@ function abspath(relative: string) {
     return path.normalize(relative)
 }
 
+const getText = (eh: puppeteer.ElementHandle | null) => eh !== null
+                ? eh.getProperty("textContent").then(p => p.jsonValue())
+                : null;
+
+const getHref = async (eh: puppeteer.ElementHandle | null) => eh !== null
+                ? await (await eh.getProperty("href")).jsonValue() as string
+                : null;
+
+
+async function getNestedEpisodeURLs(browser: puppeteer.Browser, URL: string): Promise<string[]> {
+    const page = await browser.newPage();
+    await page.goto(URL);
+
+    const tablist = await page.$$("li.com-m-TabList__tab > a.com-m-TabList__label-container");
+    function isNonNull(URL: string | null): URL is string {
+        return URL !== null
+    }
+    return tablist === []
+        ? [URL]
+        : Promise.all(tablist.map(getHref))
+            .then(urls => urls.filter(isNonNull))
+            .then(urls => [URL, ...urls]);
+}
 
 async function scrape(browser: puppeteer.Browser, URL: string): Promise<VODStatus> {
     const page = await browser.newPage();
@@ -64,9 +87,6 @@ async function scrape(browser: puppeteer.Browser, URL: string): Promise<VODStatu
 
     //await page.screenshot({ path: "./hoge.jpg", type: "jpeg", quality: 100 });
 
-    const getText = (eh: puppeteer.ElementHandle | null) => eh !== null
-        ? eh.getProperty("textContent").then(p => p.jsonValue())
-        : null;
 
     const title = await page.$("h1.com-video-TitleSection__title").then(getText) as string;
 
@@ -74,9 +94,8 @@ async function scrape(browser: puppeteer.Browser, URL: string): Promise<VODStatu
     const episodes = await Promise.all(episodeEHs.map(async episode => {
 
         const videoURLEH = await episode.$("a.com-a-Link");
-        const videoURL: string | null = videoURLEH !== null
-                ? await (await videoURLEH.getProperty("href")).jsonValue() as string
-                : null;
+        const videoURL: string | null = await getHref(videoURLEH)
+
         if (videoURL === null) return Promise.reject(new Error("No URL"));
 
         const subtitle = await episode.$("span.com-a-CollapsedText__container").then(getText) as string;
@@ -129,8 +148,12 @@ async function crawl(rawUrlsPath: string, rawRecordedDir: string ){
 
     const browser = await puppeteer.launch({ args: ["--no-sandbox", "--disable-setuid-sandbox"] });
 
+    // fetch nested urls
+    const _urls = ([] as string[]).concat(...await Promise.all(urls.map(URL => getNestedEpisodeURLs(browser, URL))));
+    console.log(_urls);
+
     // fetch metadata
-    const programs: VODStatus[] = await Promise.all(urls.map(URL => scrape(browser, URL)));
+    const programs: VODStatus[] = await Promise.all(_urls.map(URL => scrape(browser, URL)));
     browser.close();
 
     const downloadTargets: VODStatus[] = programs.map((program: VODStatus) => {
