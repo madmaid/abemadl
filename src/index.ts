@@ -177,6 +177,7 @@ async function crawl(rawUrlsPath: string, rawRecordedDir: string ){
 
 
     let newLog = log;
+    // append a log
     downloadedLog.forEach((program: Recorded) => {
         const alreadyDownloaded: Episode[] = newLog[program.url].episodes || [];
         program.episodes = [...alreadyDownloaded, ...program.episodes]
