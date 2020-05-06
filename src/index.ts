@@ -34,6 +34,8 @@ type Episode = {
     subtitle: string | null,
 }
 
+const defaultURLJSONPath = "~/.config/abemadl/urls.json"
+
 function initFile(filePath: string, init: string) {
     const _path = sanitize(filePath)
     fs.mkdirSync(path.dirname(_path), { recursive: true });
@@ -188,21 +190,39 @@ async function crawl(rawUrlsPath: string, rawRecordedDir: string ){
     fs.writeFileSync(logPath, JSON.stringify(newLog));
 }
 
+function add(URL: string, jsonpath: string){
+    const urlsPath = abspath(jsonpath);
+    initFile(urlsPath, "[]");
+
+    const old = JSON.parse(fs.readFileSync(urlsPath, "utf8")) as string[];
+    const _new = [URL].concat(old);
+    fs.writeFileSync(urlsPath, JSON.stringify(_new));
+    
+}
+
 (function main(){
 
-    yargs.command("crawl", "download videos from URLs in json", {
+    yargs.command("crawl", "download videos from URLs in a JSON List", {
         urlsPath: {
             alias: "urls",
-            default: "~/.config/abemadl/urls.json"
+            default: defaultURLJSONPath
         },
         recordedDir: {
             alias: "dst",
             default: "./"
         }
     },
-    (args) => {
+    args => {
         crawl(args.urlsPath as string, args.recordedDir as string);
-    }).argv;
-
+    })
+    .command("add <URL>", "add a specified URL into a JSON list", yargs => {
+        yargs.positional("URL", {
+            describe: "abema URL"
+        })
+    },
+    args => {
+        add(args.URL as string, defaultURLJSONPath)
+    })
+    .argv;
 
 })();
