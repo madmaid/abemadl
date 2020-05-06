@@ -35,11 +35,12 @@ type Episode = {
 }
 
 function initFile(filePath: string, init: string) {
-    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    const _path = sanitize(filePath)
+    fs.mkdirSync(path.dirname(_path), { recursive: true });
     try {
-        fs.accessSync(filePath)
+        fs.accessSync(_path)
     } catch (err) {
-        fs.writeFileSync(filePath, init)
+        fs.writeFileSync(_path, init)
     }
 }
 
