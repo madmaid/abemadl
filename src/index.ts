@@ -196,7 +196,7 @@ function add(URL: string, jsonpath: string){
 
     const old = JSON.parse(fs.readFileSync(urlsPath, "utf8")) as string[];
     const _new = [URL].concat(old);
-    fs.writeFileSync(urlsPath, JSON.stringify(_new));
+    fs.writeFileSync(urlsPath, JSON.stringify(_new, null, 4));
     
 }
 
