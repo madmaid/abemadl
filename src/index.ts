@@ -37,12 +37,11 @@ type Episode = {
 const defaultURLJSONPath = "~/.config/abemadl/urls.json"
 
 function initFile(filePath: string, init: string) {
-    const _path = sanitize(filePath)
-    fs.mkdirSync(path.dirname(_path), { recursive: true });
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
     try {
-        fs.accessSync(_path)
+        fs.accessSync(filePath)
     } catch (err) {
-        fs.writeFileSync(_path, init)
+        fs.writeFileSync(filePath, init)
     }
 }
 
@@ -123,7 +122,7 @@ function download(episode: Episode, title: string, recordedDir: string): Episode
 
     const videoURLPath = (url.parse(videoURL).pathname as string).split("/").pop();
     const filename = sanitize(`${title} - ${subtitle}_${videoURLPath}.${ext}`);
-    const dstPath = path.join(recordedDir, title);
+    const dstPath = path.join(recordedDir, sanitize(title));
     fs.mkdirSync(dstPath, { recursive: true });
 
     const filePath = abspath(path.join(dstPath, filename));
