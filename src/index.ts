@@ -152,7 +152,6 @@ async function crawl(rawUrlsPath: string, rawRecordedDir: string ){
 
     // fetch nested urls
     const _urls = ([] as string[]).concat(...await Promise.all(urls.map(URL => getNestedEpisodeURLs(browser, URL))));
-    console.log(_urls);
 
     // fetch metadata
     const programs: VODStatus[] = await Promise.all(_urls.map(URL => scrape(browser, URL)));
