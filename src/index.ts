@@ -155,7 +155,7 @@ async function crawl(rawUrlsPath: string, rawRecordedDir: string ){
 
     // fetch metadata
     const programs: VODStatus[] = await Promise.all(_urls.map(URL => scrape(browser, URL)));
-    browser.close();
+    await browser.close();
 
     const downloadTargets: VODStatus[] = programs.map((program: VODStatus) => {
         const logProgram: Recorded | undefined = log[program.url];
