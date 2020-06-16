@@ -2,7 +2,7 @@
 Description=Daily Timer for AbemaTV Video Donwloader
 
 [Timer]
-OnCalendar=*-*-* 4:20:00
+OnCalendar=*-*-* 5:20:00
 Unit=abemadl.service
 
 [Install]
