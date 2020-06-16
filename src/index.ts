@@ -136,26 +136,12 @@ function download(episode: Episode, title: string, recordedDir: string): Episode
     return episode;
 }
 
-async function crawl(rawUrlsPath: string, rawRecordedDir: string ){
+function downloadVideos(programs: VODStatus[], rawRecordedDir: string) {
     const logPath = abspath("~/.log/abemadl/downloads.json");
-    const urlsPath = abspath(rawUrlsPath);
-
-    initFile(urlsPath, "[]");
     initFile(logPath, "{}");
 
-    const recordedDir = abspath(rawRecordedDir);
-
     const log = JSON.parse(fs.readFileSync(logPath, "utf8")) as Log;
-    const urls = JSON.parse(fs.readFileSync(urlsPath, "utf8")) as string[];
-
-    const browser = await puppeteer.launch({ args: ["--no-sandbox", "--disable-setuid-sandbox"] });
-
-    // fetch nested urls
-    const _urls = ([] as string[]).concat(...await Promise.all(urls.map(URL => getNestedEpisodeURLs(browser, URL))));
-
-    // fetch metadata
-    const programs: VODStatus[] = await Promise.all(_urls.map(URL => scrape(browser, URL)));
-    await browser.close();
+    const recordedDir = abspath(rawRecordedDir);
 
     const downloadTargets: VODStatus[] = programs.map((program: VODStatus) => {
         const logProgram: Recorded | undefined = log[program.url];
@@ -175,8 +161,6 @@ async function crawl(rawUrlsPath: string, rawRecordedDir: string ){
                 download(ep, program.title, recordedDir));
         return _program;
     })
-
-
     let newLog = log;
     // append a log
     downloadedLog.forEach((program: Recorded) => {
@@ -186,6 +170,30 @@ async function crawl(rawUrlsPath: string, rawRecordedDir: string ){
     });
 
     fs.writeFileSync(logPath, JSON.stringify(newLog));
+}
+
+
+async function crawl(rawUrlsPath: string, recordedDir: string ){
+    const urlsPath = abspath(rawUrlsPath);
+    initFile(urlsPath, "[]");
+    const urls = JSON.parse(fs.readFileSync(urlsPath, "utf8")) as string[];
+
+
+    const browser = await puppeteer.launch({ args: ["--no-sandbox", "--disable-setuid-sandbox"] });
+    try {
+        // fetch nested urls
+        const _urls = ([] as string[]).concat(...await Promise.all(urls.map(URL => getNestedEpisodeURLs(browser, URL))));
+        // fetch metadata
+        const programs: VODStatus[] = await Promise.all(_urls.map(URL => scrape(browser, URL)));
+        await browser.close();
+
+        downloadVideos(programs, recordedDir)
+    }
+    catch (err) {
+        await browser.close();
+        process.exit(1);
+    }
+
 }
 
 function add(URL: string, jsonpath: string){
@@ -211,11 +219,7 @@ function add(URL: string, jsonpath: string){
         }
     },
     args => {
-        try {
-            crawl(args.urlsPath as string, args.recordedDir as string);
-        } catch (TimeoutError) {
-            process.exit(1)
-        }
+        crawl(args.urlsPath as string, args.recordedDir as string);
     })
     .command("add <URL>", "add a specified URL into a JSON list", yargs => {
         yargs.positional("URL", {
