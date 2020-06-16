@@ -4,8 +4,8 @@ Description=Download AbemaTV Videos
 Type=oneshot
 WorkingDirectory=%h/repo/abemadl/
 ExecStart=/usr/bin/npm start -- crawl --dst /media/recorded/abema/
-
 Environment=NODE_ENV=production
+Restart=on-failure
 
 [Install]
 WantedBy=default.target

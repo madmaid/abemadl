@@ -211,7 +211,11 @@ function add(URL: string, jsonpath: string){
         }
     },
     args => {
-        crawl(args.urlsPath as string, args.recordedDir as string);
+        try {
+            crawl(args.urlsPath as string, args.recordedDir as string);
+        } catch (TimeoutError) {
+            process.exit(1)
+        }
     })
     .command("add <URL>", "add a specified URL into a JSON list", yargs => {
         yargs.positional("URL", {
