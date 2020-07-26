@@ -76,6 +76,10 @@ async function getNestedEpisodeURLs(browser: puppeteer.Browser, URL: string): Pr
             .then(urls => [URL, ...urls]);
 }
 
+async function wait (ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms))
+}
+
 async function scrape(browser: puppeteer.Browser, URL: string): Promise<VODStatus> {
     const page = await browser.newPage();
     await page.setViewport({ width: 1200, height: 800 });
@@ -83,6 +87,19 @@ async function scrape(browser: puppeteer.Browser, URL: string): Promise<VODStatu
     await page.goto(URL);
     await page.waitForSelector("p.com-video-EpisodeList__title");
     await page.waitForSelector("span.com-vod-VODLabel");
+
+    // scroll to the bottom for programs later then ep40 
+    let lastHeight = 0;
+    let bottom = 0;
+    do {
+        lastHeight = bottom
+        bottom = await page.evaluate(() => {
+            window.scrollBy(0, document.body.scrollHeight);
+            return document.body.scrollHeight
+        })
+
+        await wait(5000);
+    } while (lastHeight < bottom)
 
     //const html = await page.content();
     //fs.writeFile("./hoge.html", html, () => {});
@@ -173,7 +190,7 @@ function downloadVideos(programs: VODStatus[], rawRecordedDir: string) {
 }
 
 
-async function crawl(rawUrlsPath: string, recordedDir: string ){
+async function crawl(rawUrlsPath: string, recordedDir: string, dryrun: boolean){
     const urlsPath = abspath(rawUrlsPath);
     initFile(urlsPath, "[]");
     const urls = JSON.parse(fs.readFileSync(urlsPath, "utf8")) as string[];
@@ -187,7 +204,8 @@ async function crawl(rawUrlsPath: string, recordedDir: string ){
         const programs: VODStatus[] = await Promise.all(_urls.map(URL => scrape(browser, URL)));
         await browser.close();
 
-        downloadVideos(programs, recordedDir)
+        dryrun ? console.log(programs.map(p => p.episodes))
+            : downloadVideos(programs, recordedDir);
     }
     catch (err) {
         await browser.close();
@@ -209,17 +227,21 @@ function add(URL: string, jsonpath: string){
 (function main(){
 
     yargs.command("crawl", "download videos from URLs in a JSON List", {
-        urlsPath: {
-            alias: "urls",
+        "urls": {
             default: defaultURLJSONPath
         },
-        recordedDir: {
+        "recorded-dir": {
             alias: "dst",
             default: "./"
+        },
+        "dry-run": {
+            alias: "dryrun",
+            boolean: true,
+            default: false
         }
     },
     args => {
-        crawl(args.urlsPath as string, args.recordedDir as string);
+        crawl(args.urls as string, args.dst as string, args.dryrun as boolean);
     })
     .command("add <URL>", "add a specified URL into a JSON list", yargs => {
         yargs.positional("URL", {
