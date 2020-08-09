@@ -1,5 +1,6 @@
 [Unit]
 Description=Download AbemaTV Videos
+StartLimitIntervalSec=3600
 [Service]
 Type=oneshot
 WorkingDirectory=%h/repo/abemadl/
