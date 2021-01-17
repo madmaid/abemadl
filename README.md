@@ -27,7 +27,7 @@ or to crawl as single-time execution,
     systemctl --user start abemadl.service 
 ```
 
-## Exsample execution with options
+## Example for execution with options
 ```bash
     cd /path/to/project_root/
     npm start -- crawl --dst /path/to/recorded/
