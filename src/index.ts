@@ -190,18 +190,18 @@ function downloadVideos(programs: VODStatus[], rawRecordedDir: string) {
 }
 
 
-async function crawl(rawUrlsPath: string, recordedDir: string, dryrun: boolean){
+async function crawl(rawUrlsPath: string, recordedDir: string, dryrun: boolean, browserPath?: string){
     const urlsPath = abspath(rawUrlsPath);
     initFile(urlsPath, "[]");
     const urls = JSON.parse(fs.readFileSync(urlsPath, "utf8")) as string[];
 
 
-    const browser = await puppeteer.launch({ args: ["--no-sandbox", "--disable-setuid-sandbox"] });
+    const browser = await launchBrowser(browserPath);
     try {
         // fetch nested urls
-        const _urls = ([] as string[]).concat(...await Promise.all(urls.map(URL => getNestedEpisodeURLs(browser, URL))));
+        const nested_urls = ([] as string[]).concat(...await Promise.all(urls.map(URL => getNestedEpisodeURLs(browser, URL))));
         // fetch metadata
-        const programs: VODStatus[] = await Promise.all(_urls.map(URL => scrape(browser, URL)));
+        const programs: VODStatus[] = await Promise.all(nested_urls.map(URL => scrape(browser, URL)));
         await browser.close();
 
         dryrun ? console.log(programs.map(p => p.episodes))
@@ -214,6 +214,23 @@ async function crawl(rawUrlsPath: string, recordedDir: string, dryrun: boolean){
 
 }
 
+
+async function launchBrowser(browserPath?: string): Promise<puppeteer.Browser> {
+    const defaultOption = {
+        args: ["--no-sandbox", "--disable-setuid-sandbox"]
+    }
+
+    const option = typeof browserPath === undefined
+        ? defaultOption
+        : {
+            executablePath: browserPath,
+            headless: true,
+            ...defaultOption
+        }
+
+    return puppeteer.launch(option);
+}
+
 function add(URL: string, jsonpath: string){
     const urlsPath = abspath(jsonpath);
     initFile(urlsPath, "[]");
@@ -223,6 +240,7 @@ function add(URL: string, jsonpath: string){
     fs.writeFileSync(urlsPath, JSON.stringify(_new, null, 4));
     
 }
+
 
 (function main(){
 
@@ -234,6 +252,9 @@ function add(URL: string, jsonpath: string){
             alias: "dst",
             default: "./"
         },
+        "browser-path": {
+            alias: "dst",
+        },
         "dry-run": {
             alias: "dryrun",
             boolean: true,
@@ -241,7 +262,8 @@ function add(URL: string, jsonpath: string){
         }
     },
     args => {
-        crawl(args.urls as string, args.dst as string, args.dryrun as boolean);
+        const browserPath = args.browserpath;
+        crawl(args.urls as string, args.dst as string, args.dryrun as boolean, browserPath as string);
     })
     .command("add <URL>", "add a specified URL into a JSON list", yargs => {
         yargs.positional("URL", {
